@@ -1,3 +1,6 @@
+
+# coding: utf-8
+
 # # Project 5
 # 
 # ## Step 1: Exploring the Enron Dataset
@@ -7,7 +10,6 @@
 # In[1]:
 
 # Import necessary libraries
-get_ipython().magic(u'pylab inline')
 import sys
 import pickle
 import pandas as pd
@@ -144,7 +146,7 @@ all_features = ['poi', 'salary', 'deferral_payments', 'total_payments', 'loan_ad
 
 # ### Section 2: Select the Features using SelectKBest
 
-# In[37]:
+# In[6]:
 
 # Import all the necessary tools
 from tester import test_classifier
@@ -191,14 +193,14 @@ def get_best_features(features, labels):
     for item in sorted_features:
         print item
 
-get_kbest_features(features, labels)
+get_best_features(features, labels)
 
 
 # The top ten features seem to be 'exercised_stock_options', 'total_stock_value', 'bonus', 'salary', 'fraction_to_poi', 'deferred_income', 'long_term_incentive', 'restricted_stock', 'fraction_shared_with_poi', and 'total_payments.' However, the number of features and number of dimensions were arbitraily chosen. Therefore, more scientific way is needed to select the best features. For this, Grid Search will be used. 
 # 
 # ## Step 3: Select the Algorithm
 
-# In[29]:
+# In[7]:
 
 # Assign all the classifiers and tools; they will be used in the function below.
 scaler = MinMaxScaler()
@@ -223,27 +225,27 @@ def scores(classifier, number_top_features, number_dimensions):
     test_classifier(clf, my_dataset, all_features)
 
 
-# In[30]:
+# In[8]:
 
 scores(gnb, 10, 5)
 
 
-# In[31]:
+# In[9]:
 
 scores(svc, 10, 5)
 
 
-# In[32]:
+# In[10]:
 
 scores(dt, 10, 5)
 
 
-# In[33]:
+# In[11]:
 
 scores(kn, 10, 5)
 
 
-# In[34]:
+# In[12]:
 
 scores(rf, 10, 5)
 
@@ -252,7 +254,7 @@ scores(rf, 10, 5)
 
 # ## Step 4: GridSearchCV
 
-# In[35]:
+# In[13]:
 
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.model_selection import GridSearchCV
@@ -297,3 +299,47 @@ get_scores(dt, params_dt)
 
 
 # Decision Tree should be used! I now have an algorithm to detect the criminals in Enron case.
+
+# ## Step 5: Additional Analysis
+# 
+# ### Was I smart to add new features?
+
+# In[15]:
+
+# Select only the old features
+old_features = ['poi', 'salary', 'deferral_payments', 'total_payments', 'loan_advances', 'bonus', 
+                'restricted_stock_deferred', 'deferred_income', 'total_stock_value', 'expenses', 
+                'exercised_stock_options', 'other', 'long_term_incentive', 'restricted_stock', 'director_fees', 
+                'to_messages', 'from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 
+                'shared_receipt_with_poi']
+
+# Use featureFormat to divide the set into featuresa and label then divide the set into train and test sets.
+data = featureFormat(my_dataset, old_features, sort_keys = True)
+labels, features = targetFeatureSplit(data)
+features_train, features_test, labels_train, labels_test = train_test_split(features, labels, test_size=0.3, random_state=42)
+
+# get the best score using old features
+def get_old_scores(classifier, parameters):
+    steps = [('scaling',scaler), ('SKB', skb), ('algo', classifier)]
+    pipeline = Pipeline(steps)
+    cv = StratifiedShuffleSplit(labels, n_iter=100, random_state = 42)
+    gs = GridSearchCV(pipeline, parameters, n_jobs = -1, cv=cv, scoring="f1")
+    gs.fit(features, labels)
+    clf = gs.best_estimator_
+    features_selected = [old_features[i+1] for i in clf.named_steps['SKB'].get_support(indices=True)]
+    print 'The features selected by SelectKBest:'
+    print features_selected, '\n'
+    print "The best parameters: ", gs.best_params_, '\n'
+    print "Tester Classification report" 
+    test_classifier(clf, my_dataset, old_features)
+
+
+# In[16]:
+
+get_old_scores(dt, params_dt)
+
+
+# In[ ]:
+
+get_scores(dt, params_dt)
+
